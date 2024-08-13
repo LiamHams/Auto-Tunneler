@@ -42,11 +42,15 @@ EOF
     sudo chmod +x $RC_LOCAL_PATH
 }
 
-# Function to delete all tunnels with specified types
+# Function to delete all tunnels with specified types, excluding system tunnels
 delete_all_tunnels() {
-    # Fetch and delete all tunnels of specific types
+    # Fetch and delete all tunnels of specific types, excluding system tunnels
     for tunnel in $(ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre/ {print $2}' | cut -d'@' -f1); do
-        ip tunnel del $tunnel && echo "Deleted tunnel: $tunnel" || echo "Failed to delete tunnel: $tunnel"
+        if [[ "$tunnel" != "ip6gre0" ]]; then
+            ip tunnel del $tunnel && echo "Deleted tunnel: $tunnel" || echo "Failed to delete tunnel: $tunnel"
+        else
+            echo "Skipped system tunnel: $tunnel"
+        fi
     done
 }
 
