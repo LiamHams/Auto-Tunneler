@@ -3,73 +3,136 @@
 # Get the server's public IPv4 automatically
 LOCAL_IPV4=$(curl -s4 ifconfig.me)
 
+# Define rc.local file path
+RC_LOCAL_PATH="/etc/rc.local"
+RC_LOCAL_DEFAULT_PATH="/etc/default/rc-local"
+
+# Function to add commands to rc.local
+add_to_rc_local() {
+    # Remove existing tunnel commands if they exist
+    sed -i '/^# Tunnels setup/d' $RC_LOCAL_PATH
+    sed -i '/^ip tunnel/d' $RC_LOCAL_PATH
+
+    # Add new commands to rc.local
+    cat <<EOF | sudo tee -a $RC_LOCAL_PATH
+#!/bin/bash
+# Tunnels setup
+ip tunnel add 6to4tun_IR_1 mode sit remote $REMOTE_IPV4_1 local $LOCAL_IPV4
+ip -6 addr add f100::1/8 dev 6to4tun_IR_1
+ip link set 6to4tun_IR_1 mtu 1480
+ip link set 6to4tun_IR_1 up
+
+ip tunnel add 6to4tun_IR_2 mode sit remote $REMOTE_IPV4_2 local $LOCAL_IPV4
+ip -6 addr add f200::1/8 dev 6to4tun_IR_2
+ip link set 6to4tun_IR_2 mtu 1480
+ip link set 6to4tun_IR_2 up
+
+ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote f100::2 local f100::1
+ip addr add 99.99.1.1/30 dev GRE6Tun_IR_1
+ip link set GRE6Tun_IR_1 mtu 1436
+ip link set GRE6Tun_IR_1 up
+
+ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1
+ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2
+ip link set GRE6Tun_IR_2 mtu 1436
+ip link set GRE6Tun_IR_2 up
+EOF
+
+    # Ensure rc.local is executable
+    sudo chmod +x $RC_LOCAL_PATH
+}
+
 # Menu
 echo "1. Create Tunnels"
 echo "2. Delete Tunnels"
-echo "3. Create and Enable Auto-Start Service"
-read -p "Please select an option [1, 2, or 3]: " option
+echo "3. Configure rc.local for Auto-Start"
+echo "4. Disable Tunnels Auto-Start"
+read -p "Please select an option [1, 2, 3, or 4]: " option
 
 if [ "$option" == "1" ]; then
     read -p "Please enter the remote IPv4 for 6to4tun_IR_1: " REMOTE_IPV4_1
     read -p "Please enter the remote IPv4 for 6to4tun_IR_2: " REMOTE_IPV4_2
 
-    ip tunnel add 6to4tun_IR_1 mode sit remote $REMOTE_IPV4_1 local $LOCAL_IPV4
-    ip -6 addr add f100::1/8 dev 6to4tun_IR_1
-    ip link set 6to4tun_IR_1 mtu 1480
-    ip link set 6to4tun_IR_1 up
+    # Create and setup the first tunnel
+    ip tunnel add 6to4tun_IR_1 mode sit remote $REMOTE_IPV4_1 local $LOCAL_IPV4 || { echo "Failed to add tunnel 6to4tun_IR_1"; exit 1; }
+    ip -6 addr add f100::1/8 dev 6to4tun_IR_1 || { echo "Failed to add IPv6 address to 6to4tun_IR_1"; exit 1; }
+    ip link set 6to4tun_IR_1 mtu 1480 || { echo "Failed to set MTU for 6to4tun_IR_1"; exit 1; }
+    ip link set 6to4tun_IR_1 up || { echo "Failed to bring up 6to4tun_IR_1"; exit 1; }
 
-    ip tunnel add 6to4tun_IR_2 mode sit remote $REMOTE_IPV4_2 local $LOCAL_IPV4
-    ip -6 addr add f200::1/8 dev 6to4tun_IR_2
-    ip link set 6to4tun_IR_2 mtu 1480
-    ip link set 6to4tun_IR_2 up
+    # Create and setup the second tunnel
+    ip tunnel add 6to4tun_IR_2 mode sit remote $REMOTE_IPV4_2 local $LOCAL_IPV4 || { echo "Failed to add tunnel 6to4tun_IR_2"; exit 1; }
+    ip -6 addr add f200::1/8 dev 6to4tun_IR_2 || { echo "Failed to add IPv6 address to 6to4tun_IR_2"; exit 1; }
+    ip link set 6to4tun_IR_2 mtu 1480 || { echo "Failed to set MTU for 6to4tun_IR_2"; exit 1; }
+    ip link set 6to4tun_IR_2 up || { echo "Failed to bring up 6to4tun_IR_2"; exit 1; }
 
-    ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote f100::2 local f100::1
-    ip addr add 99.99.1.1/30 dev GRE6Tun_IR_1
-    ip link set GRE6Tun_IR_1 mtu 1436
-    ip link set GRE6Tun_IR_1 up
+    # Create and setup the GRE tunnel for the first 6to4 tunnel
+    ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote f100::2 local f100::1 || { echo "Failed to add GRE tunnel GRE6Tun_IR_1"; exit 1; }
+    ip addr add 99.99.1.1/30 dev GRE6Tun_IR_1 || { echo "Failed to add IPv4 address to GRE6Tun_IR_1"; exit 1; }
+    ip link set GRE6Tun_IR_1 mtu 1436 || { echo "Failed to set MTU for GRE6Tun_IR_1"; exit 1; }
+    ip link set GRE6Tun_IR_1 up || { echo "Failed to bring up GRE6Tun_IR_1"; exit 1; }
 
-    ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1
-    ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2
-    ip link set GRE6Tun_IR_2 mtu 1436
-    ip link set GRE6Tun_IR_2 up
+    # Create and setup the GRE tunnel for the second 6to4 tunnel
+    ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1 || { echo "Failed to add GRE tunnel GRE6Tun_IR_2"; exit 1; }
+    ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2 || { echo "Failed to add IPv4 address to GRE6Tun_IR_2"; exit 1; }
+    ip link set GRE6Tun_IR_2 mtu 1436 || { echo "Failed to set MTU for GRE6Tun_IR_2"; exit 1; }
+    ip link set GRE6Tun_IR_2 up || { echo "Failed to bring up GRE6Tun_IR_2"; exit 1; }
 
     echo "Tunnels created successfully."
 
 elif [ "$option" == "2" ]; then
-    ip tunnel del 6to4tun_IR_2
-    ip tunnel del GRE6Tun_IR_2
-    ip tunnel del 6to4tun_IR_1
-    ip tunnel del GRE6Tun_IR_1
+    ip tunnel del 6to4tun_IR_2 || { echo "Failed to delete tunnel 6to4tun_IR_2"; exit 1; }
+    ip tunnel del GRE6Tun_IR_2 || { echo "Failed to delete tunnel GRE6Tun_IR_2"; exit 1; }
+    ip tunnel del 6to4tun_IR_1 || { echo "Failed to delete tunnel 6to4tun_IR_1"; exit 1; }
+    ip tunnel del GRE6Tun_IR_1 || { echo "Failed to delete tunnel GRE6Tun_IR_1"; exit 1; }
 
     echo "Tunnels deleted successfully."
 
 elif [ "$option" == "3" ]; then
-    # Create systemd service file
-    SERVICE_PATH="/etc/systemd/system/tunnel-setup.service"
+    # Get remote IPv4 addresses from the user
+    read -p "Please enter the remote IPv4 for 6to4tun_IR_1: " REMOTE_IPV4_1
+    read -p "Please enter the remote IPv4 for 6to4tun_IR_2: " REMOTE_IPV4_2
+
+    # Create and configure /etc/rc.local
+    sudo bash -c "echo '' > $RC_LOCAL_PATH"
+    sudo bash -c 'cat <<EOF > /etc/rc.local
+#!/bin/bash
+# Tunnels setup
+ip tunnel add 6to4tun_IR_1 mode sit remote '$REMOTE_IPV4_1' local '$LOCAL_IPV4'
+ip -6 addr add f100::1/8 dev 6to4tun_IR_1
+ip link set 6to4tun_IR_1 mtu 1480
+ip link set 6to4tun_IR_1 up
+
+ip tunnel add 6to4tun_IR_2 mode sit remote '$REMOTE_IPV4_2' local '$LOCAL_IPV4'
+ip -6 addr add f200::1/8 dev 6to4tun_IR_2
+ip link set 6to4tun_IR_2 mtu 1480
+ip link set 6to4tun_IR_2 up
+
+ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote f100::2 local f100::1
+ip addr add 99.99.1.1/30 dev GRE6Tun_IR_1
+ip link set GRE6Tun_IR_1 mtu 1436
+ip link set GRE6Tun_IR_1 up
+
+ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1
+ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2
+ip link set GRE6Tun_IR_2 mtu 1436
+ip link set GRE6Tun_IR_2 up
+EOF'
+
+    # Ensure rc.local is executable
+    sudo chmod +x $RC_LOCAL_PATH
+
+    # Configure /etc/default/rc-local
+    echo 'exit 0' | sudo tee $RC_LOCAL_DEFAULT_PATH
+
+    echo "rc.local configured successfully."
+
+elif [ "$option" == "4" ]; then
+    # Disable auto-start by removing execute permission and clearing rc.local
+    sudo chmod -x $RC_LOCAL_PATH
+    sudo bash -c "echo '' > $RC_LOCAL_PATH"
     
-    cat <<EOF | sudo tee $SERVICE_PATH
-[Unit]
-Description=Tunnel Setup Service
-After=network.target
-
-[Service]
-ExecStart=/usr/local/bin/tunnel-setup.sh 1
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    # Move script to /usr/local/bin
-    sudo cp "$0" /usr/local/bin/tunnel-setup.sh
-    sudo chmod +x /usr/local/bin/tunnel-setup.sh
-
-    # Enable and start the service
-    sudo systemctl daemon-reload
-    sudo systemctl enable tunnel-setup.service
-    sudo systemctl start tunnel-setup.service
-
-    echo "Auto-start service created and enabled successfully."
+    echo "Auto-start disabled for tunnels and rc.local cleared."
 
 else
-    echo "Invalid option. Please select 1, 2, or 3."
+    echo "Invalid option. Please select 1, 2, 3, or 4."
 fi
