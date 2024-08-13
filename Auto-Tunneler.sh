@@ -45,10 +45,8 @@ EOF
 # Function to delete all tunnels with specified types
 delete_all_tunnels() {
     # Fetch and delete all tunnels of specific types
-    for tunnel in $(ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre/ {print $2}'); do
-        if [[ $tunnel != "ip6gre0" && $tunnel != "NONE" ]]; then
-            ip tunnel del $tunnel && echo "Deleted tunnel: $tunnel" || echo "Failed to delete tunnel: $tunnel"
-        fi
+    for tunnel in $(ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre/ {print $2}' | cut -d'@' -f1); do
+        ip tunnel del $tunnel && echo "Deleted tunnel: $tunnel" || echo "Failed to delete tunnel: $tunnel"
     done
 }
 
@@ -127,8 +125,6 @@ ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1
 ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2
 ip link set GRE6Tun_IR_2 mtu 1436
 ip link set GRE6Tun_IR_2 up
-
-exit 0
 EOF'
     sudo chmod +x $RC_LOCAL_PATH
 
