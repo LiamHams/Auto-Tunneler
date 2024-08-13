@@ -42,12 +42,13 @@ EOF
     sudo chmod +x $RC_LOCAL_PATH
 }
 
-# Function to delete all tunnels
+# Function to delete all tunnels with specified types
 delete_all_tunnels() {
-    # Delete all 6to4, ipip6, and ip6gre tunnels
-    ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre/ {print $2}' | while read -r line; do
-        ip tunnel del $line
-        echo "Deleted tunnel: $line"
+    # Fetch and delete all tunnels of specific types
+    for tunnel in $(ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre/ {print $2}'); do
+        if [[ $tunnel != "ip6gre0" && $tunnel != "NONE" ]]; then
+            ip tunnel del $tunnel && echo "Deleted tunnel: $tunnel" || echo "Failed to delete tunnel: $tunnel"
+        fi
     done
 }
 
@@ -130,10 +131,6 @@ ip link set GRE6Tun_IR_2 up
 exit 0
 EOF'
     sudo chmod +x $RC_LOCAL_PATH
-
-    # Ensure that /etc/default/rc-local contains the required configuration
-    sudo bash -c "echo '' > $RC_LOCAL_DEFAULT_PATH"
-    sudo bash -c 'echo "exit 0" > /etc/default/rc-local'
 
     echo "Tunnels added to rc.local and auto-start configured."
 
