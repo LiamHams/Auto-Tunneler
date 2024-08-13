@@ -42,12 +42,22 @@ EOF
     sudo chmod +x $RC_LOCAL_PATH
 }
 
+# Function to delete all tunnels
+delete_all_tunnels() {
+    # Delete all 6to4, ipip6, and ip6gre tunnels
+    ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre/ {print $2}' | while read -r line; do
+        ip tunnel del $line
+        echo "Deleted tunnel: $line"
+    done
+}
+
 # Menu
 echo "1. Create Tunnels"
 echo "2. Delete Tunnels"
 echo "3. Configure rc.local for Auto-Start"
 echo "4. Disable Tunnels Auto-Start"
-read -p "Please select an option [1, 2, 3, or 4]: " option
+echo "5. Delete All 6to4, ipip6, and ip6gre Tunnels"
+read -p "Please select an option [1, 2, 3, 4, or 5]: " option
 
 if [ "$option" == "1" ]; then
     read -p "Please enter the remote IPv4 for 6to4tun_IR_1: " REMOTE_IPV4_1
@@ -116,23 +126,28 @@ ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1
 ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2
 ip link set GRE6Tun_IR_2 mtu 1436
 ip link set GRE6Tun_IR_2 up
-EOF'
 
-    # Ensure rc.local is executable
+exit 0
+EOF'
     sudo chmod +x $RC_LOCAL_PATH
 
-    # Configure /etc/default/rc-local
-    echo 'exit 0' | sudo tee $RC_LOCAL_DEFAULT_PATH
+    # Ensure that /etc/default/rc-local contains the required configuration
+    sudo bash -c "echo '' > $RC_LOCAL_DEFAULT_PATH"
+    sudo bash -c 'echo "exit 0" > /etc/default/rc-local'
 
-    echo "rc.local configured successfully."
+    echo "Tunnels added to rc.local and auto-start configured."
 
 elif [ "$option" == "4" ]; then
-    # Disable auto-start by removing execute permission and clearing rc.local
+    # Disable auto-start and clear rc.local
     sudo chmod -x $RC_LOCAL_PATH
     sudo bash -c "echo '' > $RC_LOCAL_PATH"
     
     echo "Auto-start disabled for tunnels and rc.local cleared."
 
+elif [ "$option" == "5" ]; then
+    delete_all_tunnels
+    echo "All 6to4, ipip6, and ip6gre tunnels deleted."
+
 else
-    echo "Invalid option. Please select 1, 2, 3, or 4."
+    echo "Invalid option. Please select 1, 2, 3, 4, or 5."
 fi
