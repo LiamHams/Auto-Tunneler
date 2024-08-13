@@ -45,7 +45,7 @@ EOF
 # Function to delete all tunnels with specified types, excluding system tunnels
 delete_all_tunnels() {
     # Fetch and delete all tunnels of specific types, excluding system tunnels
-    for tunnel in $(ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre/ {print $2}' | cut -d'@' -f1); do
+    for tunnel in $(ip -o link show | awk -F': ' '/6to4|ipip6|ip6gre|gre6/ {print $2}' | cut -d'@' -f1); do
         if [[ "$tunnel" != "ip6gre0" ]]; then
             ip tunnel del $tunnel && echo "Deleted tunnel: $tunnel" || echo "Failed to delete tunnel: $tunnel"
         else
@@ -59,7 +59,7 @@ echo "1. Create Tunnels"
 echo "2. Delete Tunnels"
 echo "3. Configure rc.local for Auto-Start"
 echo "4. Disable Tunnels Auto-Start"
-echo "5. Delete All 6to4, ipip6, and ip6gre Tunnels"
+echo "5. Delete All 6to4, ipip6, ip6gre, and gre6 Tunnels"
 read -p "Please select an option [1, 2, 3, 4, or 5]: " option
 
 if [ "$option" == "1" ]; then
@@ -143,7 +143,7 @@ elif [ "$option" == "4" ]; then
 
 elif [ "$option" == "5" ]; then
     delete_all_tunnels
-    echo "All 6to4, ipip6, and ip6gre tunnels deleted."
+    echo "All 6to4, ipip6, ip6gre, and gre6 tunnels deleted."
 
 else
     echo "Invalid option. Please select 1, 2, 3, 4, or 5."
