@@ -18,22 +18,22 @@ add_to_rc_local() {
 #!/bin/bash
 # Tunnels setup
 ip tunnel add 6to4tun_IR_1 mode sit remote $REMOTE_IPV4_1 local $LOCAL_IPV4
-ip -6 addr add f100::1/8 dev 6to4tun_IR_1
+ip -6 addr add fc00::1/32 dev 6to4tun_IR_1
 ip link set 6to4tun_IR_1 mtu 1480
 ip link set 6to4tun_IR_1 up
 
 ip tunnel add 6to4tun_IR_2 mode sit remote $REMOTE_IPV4_2 local $LOCAL_IPV4
-ip -6 addr add f200::1/8 dev 6to4tun_IR_2
+ip -6 addr add fd00::1/32 dev 6to4tun_IR_2
 ip link set 6to4tun_IR_2 mtu 1480
 ip link set 6to4tun_IR_2 up
 
 ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote f100::2 local f100::1
-ip addr add 99.99.1.1/30 dev GRE6Tun_IR_1
+ip addr add 172.20.30.1/28 dev GRE6Tun_IR_1
 ip link set GRE6Tun_IR_1 mtu 1436
 ip link set GRE6Tun_IR_1 up
 
 ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1
-ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2
+ip addr add 172.20.40.1/28 dev GRE6Tun_IR_2
 ip link set GRE6Tun_IR_2 mtu 1436
 ip link set GRE6Tun_IR_2 up
 EOF
@@ -68,25 +68,25 @@ if [ "$option" == "1" ]; then
 
     # Create and setup the first tunnel
     ip tunnel add 6to4tun_IR_1 mode sit remote $REMOTE_IPV4_1 local $LOCAL_IPV4 || { echo "Failed to add tunnel 6to4tun_IR_1"; exit 1; }
-    ip -6 addr add f100::1/8 dev 6to4tun_IR_1 || { echo "Failed to add IPv6 address to 6to4tun_IR_1"; exit 1; }
+    ip -6 addr add fc00::1/32 dev 6to4tun_IR_1 || { echo "Failed to add IPv6 address to 6to4tun_IR_1"; exit 1; }
     ip link set 6to4tun_IR_1 mtu 1480 || { echo "Failed to set MTU for 6to4tun_IR_1"; exit 1; }
     ip link set 6to4tun_IR_1 up || { echo "Failed to bring up 6to4tun_IR_1"; exit 1; }
 
     # Create and setup the second tunnel
     ip tunnel add 6to4tun_IR_2 mode sit remote $REMOTE_IPV4_2 local $LOCAL_IPV4 || { echo "Failed to add tunnel 6to4tun_IR_2"; exit 1; }
-    ip -6 addr add f200::1/8 dev 6to4tun_IR_2 || { echo "Failed to add IPv6 address to 6to4tun_IR_2"; exit 1; }
+    ip -6 addr add fd00::1/32 dev 6to4tun_IR_2 || { echo "Failed to add IPv6 address to 6to4tun_IR_2"; exit 1; }
     ip link set 6to4tun_IR_2 mtu 1480 || { echo "Failed to set MTU for 6to4tun_IR_2"; exit 1; }
     ip link set 6to4tun_IR_2 up || { echo "Failed to bring up 6to4tun_IR_2"; exit 1; }
 
     # Create and setup the GRE tunnel for the first 6to4 tunnel
     ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote f100::2 local f100::1 || { echo "Failed to add GRE tunnel GRE6Tun_IR_1"; exit 1; }
-    ip addr add 99.99.1.1/30 dev GRE6Tun_IR_1 || { echo "Failed to add IPv4 address to GRE6Tun_IR_1"; exit 1; }
+    ip addr add 172.20.30.1/28 dev GRE6Tun_IR_1 || { echo "Failed to add IPv4 address to GRE6Tun_IR_1"; exit 1; }
     ip link set GRE6Tun_IR_1 mtu 1436 || { echo "Failed to set MTU for GRE6Tun_IR_1"; exit 1; }
     ip link set GRE6Tun_IR_1 up || { echo "Failed to bring up GRE6Tun_IR_1"; exit 1; }
 
     # Create and setup the GRE tunnel for the second 6to4 tunnel
     ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1 || { echo "Failed to add GRE tunnel GRE6Tun_IR_2"; exit 1; }
-    ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2 || { echo "Failed to add IPv4 address to GRE6Tun_IR_2"; exit 1; }
+    ip addr add 172.20.40.1/28 dev GRE6Tun_IR_2 || { echo "Failed to add IPv4 address to GRE6Tun_IR_2"; exit 1; }
     ip link set GRE6Tun_IR_2 mtu 1436 || { echo "Failed to set MTU for GRE6Tun_IR_2"; exit 1; }
     ip link set GRE6Tun_IR_2 up || { echo "Failed to bring up GRE6Tun_IR_2"; exit 1; }
 
@@ -111,22 +111,22 @@ elif [ "$option" == "3" ]; then
 #!/bin/bash
 # Tunnels setup
 ip tunnel add 6to4tun_IR_1 mode sit remote '$REMOTE_IPV4_1' local '$LOCAL_IPV4'
-ip -6 addr add f100::1/8 dev 6to4tun_IR_1
+ip -6 addr add fc00::1/32 dev 6to4tun_IR_1
 ip link set 6to4tun_IR_1 mtu 1480
 ip link set 6to4tun_IR_1 up
 
 ip tunnel add 6to4tun_IR_2 mode sit remote '$REMOTE_IPV4_2' local '$LOCAL_IPV4'
-ip -6 addr add f200::1/8 dev 6to4tun_IR_2
+ip -6 addr add fd00::1/32 dev 6to4tun_IR_2
 ip link set 6to4tun_IR_2 mtu 1480
 ip link set 6to4tun_IR_2 up
 
 ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote f100::2 local f100::1
-ip addr add 99.99.1.1/30 dev GRE6Tun_IR_1
+ip addr add 172.20.30.1/28 dev GRE6Tun_IR_1
 ip link set GRE6Tun_IR_1 mtu 1436
 ip link set GRE6Tun_IR_1 up
 
 ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote f200::2 local f200::1
-ip addr add 99.98.1.1/30 dev GRE6Tun_IR_2
+ip addr add 172.20.40.1/28 dev GRE6Tun_IR_2
 ip link set GRE6Tun_IR_2 mtu 1436
 ip link set GRE6Tun_IR_2 up
 EOF'
