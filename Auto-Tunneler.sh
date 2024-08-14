@@ -1,7 +1,24 @@
 #!/bin/bash
 
-# Get the server's public IPv4 automatically
-LOCAL_IPV4=$(curl -s4 ifconfig.me)
+# Get the server's public IPv4s automatically
+LOCAL_IPV4S=$(ip -4 addr show scope global | grep inet | awk '{print $2}' | cut -d'/' -f1)
+
+# Function to select local IPv4 if more than one is available
+select_local_ipv4() {
+    if [ $(echo "$LOCAL_IPV4S" | wc -l) -gt 1 ]; then
+        echo "Multiple IPv4 addresses detected:"
+        echo "$LOCAL_IPV4S"
+        read -p "Please enter the IPv4 address to use as local for the tunnels: " SELECTED_IPV4
+        if echo "$LOCAL_IPV4S" | grep -q "$SELECTED_IPV4"; then
+            LOCAL_IPV4="$SELECTED_IPV4"
+        else
+            echo "Invalid IPv4 address. Exiting..."
+            exit 1
+        fi
+    else
+        LOCAL_IPV4=$(echo "$LOCAL_IPV4S")
+    fi
+}
 
 # Define rc.local file path
 RC_LOCAL_PATH="/etc/rc.local"
@@ -93,6 +110,8 @@ read -p "Please select an option [1, 2, 3, 4, or 5]: " option
 if [ "$option" == "1" ]; then
     read -p "Do you want to create 1 tunnel or 2 tunnels? [1/2]: " TUNNEL_COUNT
 
+    select_local_ipv4
+
     if [ "$TUNNEL_COUNT" -eq 1 ]; then
         read -p "Please enter the remote IPv4 for 6to4tun_IR_1: " REMOTE_IPV4_1
 
@@ -128,19 +147,17 @@ if [ "$option" == "1" ]; then
         ip link set 6to4tun_IR_1 mtu 1480 || { echo "Failed to set MTU for 6to4tun_IR_1"; exit 1; }
         ip link set 6to4tun_IR_1 up || { echo "Failed to bring up 6to4tun_IR_1"; exit 1; }
 
-        # Create and setup the second tunnel
         ip tunnel add 6to4tun_IR_2 mode sit remote $REMOTE_IPV4_2 local $LOCAL_IPV4 || { echo "Failed to add tunnel 6to4tun_IR_2"; exit 1; }
         ip -6 addr add fd00::1/32 dev 6to4tun_IR_2 || { echo "Failed to add IPv6 address to 6to4tun_IR_2"; exit 1; }
         ip link set 6to4tun_IR_2 mtu 1480 || { echo "Failed to set MTU for 6to4tun_IR_2"; exit 1; }
         ip link set 6to4tun_IR_2 up || { echo "Failed to bring up 6to4tun_IR_2"; exit 1; }
 
-        # Create and setup the GRE tunnel for the first 6to4 tunnel
+        # Create and setup the GRE tunnels
         ip -6 tunnel add GRE6Tun_IR_1 mode ipip6 remote fc00::2 local fc00::1 || { echo "Failed to add GRE tunnel GRE6Tun_IR_1"; exit 1; }
         ip addr add 172.20.30.1/28 dev GRE6Tun_IR_1 || { echo "Failed to add IPv4 address to GRE6Tun_IR_1"; exit 1; }
         ip link set GRE6Tun_IR_1 mtu 1436 || { echo "Failed to set MTU for GRE6Tun_IR_1"; exit 1; }
         ip link set GRE6Tun_IR_1 up || { echo "Failed to bring up GRE6Tun_IR_1"; exit 1; }
 
-        # Create and setup the GRE tunnel for the second 6to4 tunnel
         ip -6 tunnel add GRE6Tun_IR_2 mode ipip6 remote fd00::2 local fd00::1 || { echo "Failed to add GRE tunnel GRE6Tun_IR_2"; exit 1; }
         ip addr add 172.20.40.1/28 dev GRE6Tun_IR_2 || { echo "Failed to add IPv4 address to GRE6Tun_IR_2"; exit 1; }
         ip link set GRE6Tun_IR_2 mtu 1436 || { echo "Failed to set MTU for GRE6Tun_IR_2"; exit 1; }
@@ -164,6 +181,8 @@ elif [ "$option" == "2" ]; then
 
 elif [ "$option" == "3" ]; then
     read -p "Please enter the remote IPv4 for 6to4tun_IR_1: " REMOTE_IPV4_1
+    select_local_ipv4
+
     read -p "Do you want to configure rc.local for one or two tunnels? [1/2]: " TUNNEL_COUNT
 
     if [ "$TUNNEL_COUNT" -eq 1 ]; then
